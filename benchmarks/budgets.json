@@ -1,0 +1,17 @@
+{
+    "build_time_seconds": {
+        "java": 480,
+        "java-native-image": 1500
+    },
+    "runtime": {
+        "startup_seconds": {
+            "java": 35,
+            "java-native-image": 20
+        },
+        "memory_mib": {
+            "java": 420,
+            "java-native-image": 220
+        }
+    },
+    "run_image_max_mb": 50
+}

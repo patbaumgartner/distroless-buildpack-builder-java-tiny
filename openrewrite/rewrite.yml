@@ -1,0 +1,9 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.patbaumgartner.CodeCleanup
+displayName: Cleanup recipe pack for Java samples
+description: Applies deterministic code cleanup recipes that are safe for regular automation.
+recipeList:
+  - org.openrewrite.staticanalysis.CommonStaticAnalysis
+  - org.openrewrite.java.OrderImports
+  - org.openrewrite.java.RemoveUnusedImports
