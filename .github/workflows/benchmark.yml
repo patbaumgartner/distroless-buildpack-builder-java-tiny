@@ -1,0 +1,177 @@
+name: Benchmark
+
+on:
+  # Run after Build and Push completes so the builder image is available.
+  workflow_run:
+    workflows:
+      - "Build and Push"
+    branches:
+      - main
+    types:
+      - completed
+  # Weekly benchmark to track build-time trends.
+  schedule:
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "Number of build iterations per sample"
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE_BASE: ghcr.io/patbaumgartner/distroless-buildpack-builder-java-tiny
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Benchmark build times for each sample application
+  # -------------------------------------------------------------------------
+  benchmark:
+    name: Build-time benchmark (${{ matrix.sample }})
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sample: java
+            java_version: "25"
+          - sample: java-native-image
+            java_version: "25"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up pack CLI
+        uses: buildpacks/github-actions/setup-pack@06e250da5bb4ccb9a2103719a21d2a7f2252fe83 # v5.11.0
+
+      - name: Set up Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java_version }}
+          cache: maven
+
+      - name: Log in to GHCR
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        continue-on-error: true
+
+      - name: Pre-pull run image (GHCR sub-package requires auth; pull public Docker Hub mirror)
+        run: |
+          DOCKERHUB_RUN="patbaumgartner/distroless-buildpack-builder-java-tiny-run:latest"
+          GHCR_RUN="${{ env.IMAGE_BASE }}/run:latest"
+          docker pull "${DOCKERHUB_RUN}"
+          docker tag  "${DOCKERHUB_RUN}" "${GHCR_RUN}"
+
+      - name: Run build benchmark (${{ matrix.sample }})
+        id: bench
+        run: |
+          ITERATIONS="${{ github.event.inputs.iterations || '3' }}"
+          SAMPLE="${{ matrix.sample }}"
+          BUILDER="${{ env.IMAGE_BASE }}:latest"
+          IMAGE="benchmark/${{ matrix.sample }}:bench"
+          TOTAL=0
+
+          echo "### Benchmark: ${SAMPLE} (${ITERATIONS} iterations)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Iteration | Duration (s) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+
+          for i in $(seq 1 "${ITERATIONS}"); do
+            START=$(date +%s%N)
+            pack build "${IMAGE}" \
+              --path "./samples/${SAMPLE}" \
+              --builder "${BUILDER}" \
+              --trust-builder \
+              --pull-policy if-not-present \
+              --clear-cache 2>&1 | tail -20
+            END=$(date +%s%N)
+            ELAPSED=$(( (END - START) / 1000000000 ))
+            TOTAL=$((TOTAL + ELAPSED))
+            echo "| ${i} | ${ELAPSED} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "  Iteration ${i}: ${ELAPSED}s"
+          done
+
+          AVG=$((TOTAL / ITERATIONS))
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Average build time: ${AVG}s** (total: ${TOTAL}s over ${ITERATIONS} runs)" >> "$GITHUB_STEP_SUMMARY"
+          echo "avg=${AVG}" >> "$GITHUB_OUTPUT"
+          echo "total=${TOTAL}" >> "$GITHUB_OUTPUT"
+
+      - name: Print summary
+        run: |
+          echo "Sample:     ${{ matrix.sample }}"
+          echo "Avg time:   ${{ steps.bench.outputs.avg }}s"
+          echo "Total time: ${{ steps.bench.outputs.total }}s"
+
+  # -------------------------------------------------------------------------
+  # Compare distroless run image vs. Paketo Noble Tiny run image
+  # -------------------------------------------------------------------------
+  compare-baseline:
+    name: Compare vs. Paketo Noble Tiny baseline
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull distroless run image
+        id: distroless
+        run: |
+          set -euo pipefail
+          DOCKERHUB_RUN="patbaumgartner/distroless-buildpack-builder-java-tiny-run:latest"
+          GHCR_RUN="${{ env.IMAGE_BASE }}/run:latest"
+          docker pull "${DOCKERHUB_RUN}"
+          docker tag  "${DOCKERHUB_RUN}" "${GHCR_RUN}"
+          SIZE=$(docker image inspect "${GHCR_RUN}" --format '{{.Size}}')
+          SIZE_MB=$(echo "scale=2; ${SIZE} / 1048576" | bc)
+          echo "size_bytes=${SIZE}" >> "$GITHUB_OUTPUT"
+          echo "size_mb=${SIZE_MB}" >> "$GITHUB_OUTPUT"
+          echo "Distroless run image: ${SIZE_MB} MB"
+
+      - name: Pull Paketo Noble Tiny run image
+        id: baseline
+        run: |
+          set -euo pipefail
+          BASELINE_RUN="paketobuildpacks/run-noble-tiny:latest"
+          docker pull "${BASELINE_RUN}"
+          SIZE=$(docker image inspect "${BASELINE_RUN}" --format '{{.Size}}')
+          SIZE_MB=$(echo "scale=2; ${SIZE} / 1048576" | bc)
+          echo "size_bytes=${SIZE}" >> "$GITHUB_OUTPUT"
+          echo "size_mb=${SIZE_MB}" >> "$GITHUB_OUTPUT"
+          echo "Paketo Noble Tiny run image: ${SIZE_MB} MB"
+
+      - name: Write comparison summary
+        run: |
+          DISTROLESS_BYTES="${{ steps.distroless.outputs.size_bytes }}"
+          BASELINE_BYTES="${{ steps.baseline.outputs.size_bytes }}"
+          SAVINGS=$(echo "scale=2; (${BASELINE_BYTES} - ${DISTROLESS_BYTES}) / 1048576" | bc)
+          PCT=$(echo "scale=1; (${BASELINE_BYTES} - ${DISTROLESS_BYTES}) * 100 / ${BASELINE_BYTES}" | bc)
+
+          echo "## Compare vs. Paketo Noble Tiny baseline summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Run Image | Size (MB) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----------|----------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| distroless-buildpack-builder-java-tiny (run) | ${{ steps.distroless.outputs.size_mb }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| paketobuildpacks/run-noble-tiny | ${{ steps.baseline.outputs.size_mb }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Size savings: ${SAVINGS} MB (${PCT}% smaller than Paketo Noble Tiny)**" >> "$GITHUB_STEP_SUMMARY"
+

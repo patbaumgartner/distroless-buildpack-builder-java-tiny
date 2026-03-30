@@ -1,0 +1,22 @@
+[_]
+schema-version = "0.2"
+
+# Run the app as the direct process – required for distroless images that have no shell.
+[[ io.buildpacks.build.env ]]
+  name  = "BP_DIRECT_PROCESS"
+  value = "true"
+
+# Instruct the buildpack to compile a GraalVM Native Image binary.
+[[ io.buildpacks.build.env ]]
+  name  = "BP_NATIVE_IMAGE"
+  value = "true"
+
+# Java (GraalVM) version to use when building the application.
+[[ io.buildpacks.build.env ]]
+  name  = "BP_JVM_VERSION"
+  value = "25"
+
+# Maven arguments to activate the native profile and skip test execution during image compilation.
+[[ io.buildpacks.build.env ]]
+  name  = "BP_MAVEN_BUILD_ARGUMENTS"
+  value = "-Pnative -DskipTests package"

@@ -1,0 +1,31 @@
+description = "A Cloud Native Buildpack builder using Google Distroless run images, optimised for Java (JVM and Native Image)."
+
+[build]
+  image = "ghcr.io/patbaumgartner/distroless-buildpack-builder-java-tiny/build:latest"
+
+[run]
+  [[run.images]]
+    image = "ghcr.io/patbaumgartner/distroless-buildpack-builder-java-tiny/run:latest"
+
+[lifecycle]
+  version = "0.21.7"
+
+# Buildpacks embedded into this builder image
+
+[[buildpacks]]
+  uri = "docker://docker.io/paketobuildpacks/java-native-image:14.3.0"
+
+[[buildpacks]]
+  uri = "docker://docker.io/paketobuildpacks/java:21.4.0"
+
+# Detection order (first match wins)
+
+[[order]]
+  [[order.group]]
+    id      = "paketo-buildpacks/java-native-image"
+    version = "14.3.0"
+
+[[order]]
+  [[order.group]]
+    id      = "paketo-buildpacks/java"
+    version = "21.4.0"

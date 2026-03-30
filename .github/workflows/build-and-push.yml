@@ -1,0 +1,269 @@
+name: Build and Push
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Nightly rebuild of run containers to pick up base image security patches
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/patbaumgartner/distroless-buildpack-builder-java-tiny
+  DOCKERHUB_IMAGE_BASE: patbaumgartner/distroless-buildpack-builder-java-tiny
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Build the Ubuntu Noble build-phase stack image
+  # Skipped on nightly schedule – build images don't need daily updates.
+  # -------------------------------------------------------------------------
+  build-stack-build:
+    name: Build stack – build image
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        with:
+          images: |
+            ${{ env.IMAGE_BASE }}/build
+            ${{ env.DOCKERHUB_IMAGE_BASE }}-build
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push build stack image
+        id: build
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        with:
+          context: ./stack/build
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # sbom and provenance add extra OCI manifests to the image index;
+          # the pack CLI misidentifies these as platform manifests and fails
+          # with "missing required env var 'CNB_USER_ID'".
+          sbom: false
+          provenance: false
+
+      - name: Attest build stack image (GHCR)
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
+        with:
+          subject-name: ${{ env.IMAGE_BASE }}/build
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  # -------------------------------------------------------------------------
+  # Build the Distroless run-phase stack image
+  # Runs on every trigger including the nightly schedule to ensure the
+  # run image always contains the latest distroless base image patches.
+  # -------------------------------------------------------------------------
+  build-stack-run:
+    name: Build stack – run image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        with:
+          images: |
+            ${{ env.IMAGE_BASE }}/run
+            ${{ env.DOCKERHUB_IMAGE_BASE }}-run
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push run stack image
+        id: build
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        with:
+          context: ./stack/run
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # sbom and provenance add extra OCI manifests to the image index;
+          # the pack CLI misidentifies these as platform manifests and fails
+          # with "missing required env var 'CNB_USER_ID'".
+          sbom: false
+          provenance: false
+
+      - name: Attest run stack image (GHCR)
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
+        with:
+          subject-name: ${{ env.IMAGE_BASE }}/run
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  # -------------------------------------------------------------------------
+  # Assemble the CNB builder image using pack and push to GHCR + Docker Hub
+  # -------------------------------------------------------------------------
+  build-builder:
+    name: Build builder image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build-stack-build
+      - build-stack-run
+    if: |
+      always() &&
+      github.event_name != 'pull_request' &&
+      (needs.build-stack-run.result == 'success') &&
+      (needs.build-stack-build.result == 'success' || needs.build-stack-build.result == 'skipped')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up pack CLI
+        uses: buildpacks/github-actions/setup-pack@06e250da5bb4ccb9a2103719a21d2a7f2252fe83 # v5.11.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Determine builder tag
+        id: tag
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and publish builder to GHCR
+        run: |
+          pack builder create "${{ env.IMAGE_BASE }}:${{ steps.tag.outputs.tag }}" \
+            --config ./builder.toml \
+            --publish
+
+      - name: Push builder to Docker Hub
+        run: |
+          docker pull "${{ env.IMAGE_BASE }}:${{ steps.tag.outputs.tag }}"
+          docker tag "${{ env.IMAGE_BASE }}:${{ steps.tag.outputs.tag }}" "${{ env.DOCKERHUB_IMAGE_BASE }}:${{ steps.tag.outputs.tag }}"
+          docker push "${{ env.DOCKERHUB_IMAGE_BASE }}:${{ steps.tag.outputs.tag }}"
+
+  # -------------------------------------------------------------------------
+  # Delete old package versions from GHCR – keep only the latest 3
+  # -------------------------------------------------------------------------
+  cleanup-packages:
+    name: Cleanup old package versions
+    runs-on: ubuntu-latest
+    needs: [build-builder]
+    if: github.event_name != 'pull_request'
+    permissions:
+      packages: write
+
+    steps:
+      - name: Delete old versions – builder image
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
+        with:
+          package-name: distroless-buildpack-builder-java-tiny
+          package-type: container
+          min-versions-to-keep: 3
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old versions – build stack image
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
+        with:
+          package-name: distroless-buildpack-builder-java-tiny/build
+          package-type: container
+          min-versions-to-keep: 3
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old versions – run stack image
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
+        with:
+          package-name: distroless-buildpack-builder-java-tiny/run
+          package-type: container
+          min-versions-to-keep: 3
+          token: ${{ secrets.GITHUB_TOKEN }}

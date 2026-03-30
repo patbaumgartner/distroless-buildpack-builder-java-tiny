@@ -1,0 +1,17 @@
+[_]
+schema-version = "0.2"
+
+# Run the app as the direct process – required for distroless images that have no shell.
+[[ io.buildpacks.build.env ]]
+  name  = "BP_DIRECT_PROCESS"
+  value = "true"
+
+# Java version to use when building the application.
+[[ io.buildpacks.build.env ]]
+  name  = "BP_JVM_VERSION"
+  value = "25"
+
+# Generate a minimal custom JRE with jlink (~50-80 MB vs ~200 MB full JRE).
+[[ io.buildpacks.build.env ]]
+  name  = "BP_JVM_JLINK_ENABLED"
+  value = "true"
