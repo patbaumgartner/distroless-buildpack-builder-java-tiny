@@ -1,0 +1,102 @@
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/stack/build"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+    open-pull-requests-limit: 5
+    groups:
+      build-stack-images:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/stack/run"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+    open-pull-requests-limit: 5
+    groups:
+      run-stack-images:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "maven"
+    directory: "/samples/java"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "java"
+    open-pull-requests-limit: 5
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+      maven-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "org.springframework.boot:*"
+
+  - package-ecosystem: "maven"
+    directory: "/samples/java-native-image"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Zurich"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "java"
+    open-pull-requests-limit: 5
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+      maven-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "org.springframework.boot:*"

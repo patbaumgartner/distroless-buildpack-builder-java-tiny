@@ -1,0 +1,44 @@
+description = "A Cloud Native Buildpack builder using Google Distroless run images, optimised for Java (JVM and Native Image)."
+
+[build]
+  image = "ghcr.io/patbaumgartner/distroless-buildpack-builder-java-tiny/build:latest"
+
+[run]
+  [[run.images]]
+    image = "ghcr.io/patbaumgartner/distroless-buildpack-builder-java-tiny/run:latest"
+
+[lifecycle]
+  version = "0.21.7"
+
+# Explicitly declare target platforms so pack does not iterate over every
+# manifest in a multi-arch OCI image index. Attestation manifests pushed
+# by actions/attest-build-provenance lack CNB_USER_ID and would cause
+# "missing required env var 'CNB_USER_ID'" errors on nightly builds where
+# the build-stack-build job is skipped.
+[[targets]]
+  os   = "linux"
+  arch = "amd64"
+
+[[targets]]
+  os   = "linux"
+  arch = "arm64"
+
+# Buildpacks embedded into this builder image
+
+[[buildpacks]]
+  uri = "docker://paketobuildpacks/java-native-image:14.3.0"
+
+[[buildpacks]]
+  uri = "docker://paketobuildpacks/java:21.4.0"
+
+# Detection order (first match wins)
+
+[[order]]
+  [[order.group]]
+    id      = "paketo-buildpacks/java-native-image"
+    version = "14.3.0"
+
+[[order]]
+  [[order.group]]
+    id      = "paketo-buildpacks/java"
+    version = "21.4.0"

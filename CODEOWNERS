@@ -1,0 +1,7 @@
+* @patbaumgartner
+
+stack/               @patbaumgartner
+builder.toml         @patbaumgartner
+.github/workflows/   @patbaumgartner
+.github/dependabot.yml @patbaumgartner
+renovate.json5       @patbaumgartner
