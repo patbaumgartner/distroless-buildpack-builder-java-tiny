@@ -1,12 +1,12 @@
 # Run stack image – used as the runtime base for built application images.
 #
-# Stage 1 (ubuntu-setup): CNB user/group + tzdata.
+# Stage 1 (ubuntu-setup): CNB user/group + tzdata (UTC only).
 # Stage 2 (final):        Google Distroless base with injected user.
 #
 # Java (JVM) runtime needs: the JVM bundles its own TLS stack (JSSE) and does
 # not rely on system OpenSSL.  The distroless/cc base already ships libstdc++
-# and libgcc which is all a JVM needs from the OS.  Timezone data is the only
-# extra required for JVM-based apps such as Spring Boot.
+# and libgcc which is all a JVM needs from the OS.
+#
 # /etc/services and /etc/protocols (netbase) are not used by the JVM or Spring
 # Boot and are intentionally omitted to keep the image minimal.
 
@@ -26,6 +26,8 @@ RUN if getent passwd ubuntu >/dev/null 2>&1; then userdel --remove ubuntu; fi \
     --no-create-home \
     cnb
 
+# Install tzdata only to extract the UTC zone file. The JVM uses its own
+# bundled TZDB so the full zoneinfo tree is not needed at runtime.
 # hadolint ignore=DL3008
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -41,8 +43,12 @@ ARG CNB_GROUP_ID=1000
 COPY --from=ubuntu-setup /etc/passwd /etc/passwd
 COPY --from=ubuntu-setup /etc/group  /etc/group
 
-# Timezone data
-COPY --from=ubuntu-setup /usr/share/zoneinfo /usr/share/zoneinfo
+# UTC zone only — covers native code that probes /usr/share/zoneinfo directly.
+# Java's own TZDB handles everything else.
+COPY --from=ubuntu-setup /usr/share/zoneinfo/UTC        /usr/share/zoneinfo/UTC
+COPY --from=ubuntu-setup /usr/share/zoneinfo/Etc/UTC    /usr/share/zoneinfo/Etc/UTC
+COPY --from=ubuntu-setup /usr/share/zoneinfo/Etc/UCT    /usr/share/zoneinfo/Etc/UCT
+COPY --from=ubuntu-setup /usr/share/zoneinfo/posixrules /usr/share/zoneinfo/posixrules
 
 LABEL io.buildpacks.stack.id="io.buildpacks.stacks.noble"
 LABEL io.buildpacks.base.distro.name="distroless"
