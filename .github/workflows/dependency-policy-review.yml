@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Check for existing open issue
         id: check
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v7
         with:
           script: |
             const issues = await github.rest.issues.listForRepo({
@@ -29,7 +29,7 @@ jobs:
 
       - name: Create audit checklist issue
         if: steps.check.outputs.exists == 'false'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v7
         with:
           script: |
             const today = new Date().toISOString().slice(0, 10);
