@@ -7,7 +7,7 @@
 # Architecture-agnostic: usr/lib/*/ globs cover both amd64 and arm64.
 
 # Stage 1: Ubuntu setup — CNB user/group and tzdata extraction
-FROM ubuntu:24.04@sha256:186072bba1b2f436cbb91ef2567abca677337cfc786c86e107d25b7072feef0c AS ubuntu-setup
+FROM ubuntu:24.04@sha256:84e77dee7d1bc93fb029a45e3c6cb9d8aa4831ccfcc7103d36e876938d28895b AS ubuntu-setup
 
 ARG CNB_USER_ID=1002
 ARG CNB_GROUP_ID=1000
@@ -38,7 +38,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 # delete the dead-weight files, and hand /rootfs to the scratch stage below.
 FROM gcr.io/distroless/cc:nonroot@sha256:9c4fe2381c2e6d53c4cfdefeff6edbd2a67ec7713e2c3ca6653806cbdbf27a1e AS distroless-src
 # hadolint ignore=DL3006
-FROM ubuntu:24.04@sha256:186072bba1b2f436cbb91ef2567abca677337cfc786c86e107d25b7072feef0c AS cc-trimmer
+FROM ubuntu:24.04@sha256:84e77dee7d1bc93fb029a45e3c6cb9d8aa4831ccfcc7103d36e876938d28895b AS cc-trimmer
 COPY --from=distroless-src / /rootfs/
 # hadolint ignore=SC2114
 RUN rm -rf \
