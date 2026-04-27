@@ -98,3 +98,4 @@ updates:
           - "*"
         exclude-patterns:
           - "org.springframework.boot:*"
+# manual-trigger: 2026-04-27T06:12Z
