@@ -265,11 +265,6 @@ docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep bench-app
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Engineering Review
-
-An in-depth software craftsmanship review of this repository is available at
-[docs/REPOSITORY_REVIEW.md](docs/REPOSITORY_REVIEW.md).
-
 ## Code of Conduct
 
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
