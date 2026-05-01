@@ -46,6 +46,9 @@ jobs:
     name: Java static analysis (${{ matrix.sample }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      REWRITE_PLUGIN_VERSION: "6.38.0"
+      REWRITE_CONFIG_PATH: "${{ github.workspace }}/openrewrite/rewrite.yml"
     strategy:
       fail-fast: false
       matrix:
@@ -62,8 +65,12 @@ jobs:
           cache: maven
 
       - name: Run OpenRewrite dry-run
-        working-directory: ./samples/${{ matrix.sample }}
-        run: mvn -B rewrite:dryRun --no-transfer-progress -Dmaven.test.skip=true
+        run: |
+          mvn -B -f samples/${{ matrix.sample }}/pom.xml --no-transfer-progress \
+            org.openrewrite.maven:rewrite-maven-plugin:${{ env.REWRITE_PLUGIN_VERSION }}:dryRun \
+            -Drewrite.configLocation="${{ env.REWRITE_CONFIG_PATH }}" \
+            -Drewrite.activeRecipes=com.patbaumgartner.CodeCleanup \
+            -Dmaven.test.skip=true
 
       - name: Run Checkstyle
         working-directory: ./samples/${{ matrix.sample }}
