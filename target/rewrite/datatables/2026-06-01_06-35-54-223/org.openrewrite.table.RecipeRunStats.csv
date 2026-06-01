@@ -1,0 +1,7 @@
+# @name org.openrewrite.table.RecipeRunStats
+# @instanceName Recipe performance
+# @group 
+recipe,sourceFiles,sourceFilesChanged,scanTotalTimeNs,scanMaxNs,editTotalTimeNs,editMaxNs
+org.openrewrite.java.RemoveUnusedImports,5,0,0,0,11088019,8142199
+org.openrewrite.java.OrderImports,5,0,0,0,22734224,13295714
+com.patbaumgartner.CodeCleanup,5,0,0,0,306142,286973
