@@ -36,7 +36,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 # never dlopen.  Because distroless has no shell we cannot run rm inside it directly;
 # instead we copy its entire filesystem into /rootfs inside an Ubuntu helper layer,
 # delete the dead-weight files, and hand /rootfs to the scratch stage below.
-FROM gcr.io/distroless/cc:nonroot@sha256:e1fd250ce83d94603e9887ec991156a6c26905a6b0001039b7a43699018c0733 AS distroless-src
+FROM gcr.io/distroless/cc:nonroot@sha256:d3cda6e91129130d7229a1806b6a73d292ef245ab032da7851907798024cefba AS distroless-src
 # hadolint ignore=DL3006
 FROM ubuntu:26.04@sha256:f3d28607ddd78734bb7f71f117f3c6706c666b8b76cbff7c9ff6e5718d46ff64 AS cc-trimmer
 COPY --from=distroless-src / /rootfs/
