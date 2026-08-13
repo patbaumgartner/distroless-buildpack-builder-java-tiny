@@ -21,12 +21,12 @@
 .DS_Store
 Thumbs.db
 
-# Java build artifacts
-samples/java/target/
-samples/java/.mvn/wrapper/maven-wrapper.jar
-
-samples/java-native-image/target/
-samples/java-native-image/.mvn/wrapper/maven-wrapper.jar
+# Java build artifacts.
+# `target/` (unanchored) covers every sample plus the repository root, where
+# `mvn -f samples/<x>/pom.xml -Drewrite.exportDatatables=true` writes its
+# datatable CSVs — those are CI reports, never source.
+target/
+.mvn/wrapper/maven-wrapper.jar
 
 # Temporary test artifacts
 /tmp/
