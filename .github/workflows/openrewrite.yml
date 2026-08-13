@@ -96,16 +96,14 @@ jobs:
           mvn -B -f samples/java/pom.xml --no-transfer-progress \
             org.openrewrite.maven:rewrite-maven-plugin:${{ env.REWRITE_PLUGIN_VERSION }}:run \
             -Drewrite.configLocation="${{ env.REWRITE_CONFIG_PATH }}" \
-            -Drewrite.activeRecipes=com.patbaumgartner.CodeCleanup \
-            -Drewrite.exportDatatables=true
+            -Drewrite.activeRecipes=com.patbaumgartner.CodeCleanup
 
       - name: Apply OpenRewrite modernization pack (java-native-image sample)
         run: |
           mvn -B -f samples/java-native-image/pom.xml --no-transfer-progress \
             org.openrewrite.maven:rewrite-maven-plugin:${{ env.REWRITE_PLUGIN_VERSION }}:run \
             -Drewrite.configLocation="${{ env.REWRITE_CONFIG_PATH }}" \
-            -Drewrite.activeRecipes=com.patbaumgartner.CodeCleanup \
-            -Drewrite.exportDatatables=true
+            -Drewrite.activeRecipes=com.patbaumgartner.CodeCleanup
 
       - name: Create modernization pull request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
@@ -119,6 +117,11 @@ jobs:
             - com.patbaumgartner.CodeCleanup
           branch: "chore/openrewrite-modernization"
           delete-branch: true
+          # Without add-paths the action stages every dirty path — that is how
+          # `target/` build output previously landed in git history.
+          add-paths: |
+            samples/**/*.java
+            samples/**/pom.xml
           labels: |
             dependencies
             java
