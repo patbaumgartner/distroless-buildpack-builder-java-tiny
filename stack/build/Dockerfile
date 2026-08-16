@@ -1,8 +1,21 @@
 # Build stack image – used during the build phase of the CNB lifecycle.
 # Ubuntu 24.04 provides the full toolchain needed to compile Java apps
 # with the Paketo Java and Java Native Image buildpacks.
+#
+# The Ubuntu major version is a HARD COMPATIBILITY CONSTRAINT, not a
+# free-floating dependency. GraalVM links Native Image binaries against this
+# image's glibc, but they execute in the run image (Google Distroless, Debian
+# 13, glibc 2.41). Building on a newer glibc than the runtime provides emits
+# symbol references the runtime cannot resolve, and the binary dies at startup
+# with "version `GLIBC_2.xx' not found".
+#
+#   ubuntu:24.04 -> glibc 2.39  <= 2.41  OK
+#   ubuntu:26.04 -> glibc 2.43   > 2.41  BREAKS Native Image at runtime
+#
+# Do not raise this past the run image's glibc. See .github/dependabot.yml,
+# which restricts this image to patch/digest updates for the same reason.
 
-FROM ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03
+FROM ubuntu:24.04@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea
 
 ARG CNB_USER_ID=1000
 ARG CNB_GROUP_ID=1000
@@ -51,6 +64,7 @@ RUN mkdir -p /workspace /cnb/buildpacks /platform /layers \
 USER cnb
 
 # The CNB lifecycle reads these env vars at runtime to know which user to run buildpacks as.
+# Keep them bound to the ARGs: a literal would drift from a --build-arg override.
 ENV CNB_STACK_ID="io.buildpacks.stacks.noble"
-ENV CNB_USER_ID=1000
-ENV CNB_GROUP_ID=1000
+ENV CNB_USER_ID=${CNB_USER_ID}
+ENV CNB_GROUP_ID=${CNB_GROUP_ID}
