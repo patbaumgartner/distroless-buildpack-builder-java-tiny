@@ -88,6 +88,7 @@ echo "cnb:x:${CNB_GROUP_ID}:" >>etc/group
 
 # Java resolves user.home from passwd; a home that does not exist breaks
 # libraries that cache or write there.
-install -d -m 0755 -o "${CNB_USER_ID}" -g "${CNB_GROUP_ID}" home/cnb
+install -d -m 0755 home/cnb
+chown "${CNB_USER_ID}:${CNB_GROUP_ID}" home/cnb
 
 echo "Trim complete. Remaining rootfs size: $(du -sh . | cut -f1)"
