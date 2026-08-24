@@ -20,7 +20,7 @@
   <properties>
     <java.version>25</java.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-    <checkstyle.version>13.10.0</checkstyle.version>
+    <checkstyle.version>14.0.0</checkstyle.version>
   </properties>
 
   <dependencies>
