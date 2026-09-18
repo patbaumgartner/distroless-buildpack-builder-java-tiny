@@ -13,7 +13,7 @@
 # delete the dead-weight files, and hand /rootfs to the scratch stage below.
 FROM gcr.io/distroless/cc:nonroot@sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97 AS distroless-src
 # hadolint ignore=DL3006
-FROM ubuntu:26.04@sha256:cd21a4f68a617580279d4b091cb18e3af9fa8a87500665f0ae5f7f757d17d367 AS cc-trimmer
+FROM ubuntu:26.04@sha256:9559ceb7c21e528e233e8dff26a0fb2682f4094cce06176eeb075d87a22b31de AS cc-trimmer
 
 ARG CNB_USER_ID=1002
 ARG CNB_GROUP_ID=1000
