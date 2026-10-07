@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # Trims the Google Distroless `cc` filesystem staged at /rootfs down to what a
 # JVM or GraalVM Native Image workload actually needs, and installs the CNB user.
