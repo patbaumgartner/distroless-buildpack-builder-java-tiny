@@ -11,7 +11,7 @@
 # Because distroless has no shell we cannot run rm inside it directly;
 # instead we copy its entire filesystem into /rootfs inside an Ubuntu helper layer,
 # delete the dead-weight files, and hand /rootfs to the scratch stage below.
-FROM gcr.io/distroless/cc:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1 AS distroless-src
+FROM gcr.io/distroless/cc:nonroot@sha256:cc66d222f0a7ec996b78a99fe76a969bc80b539a5016ad866c14d1949bc6d0ab AS distroless-src
 # hadolint ignore=DL3006
 FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c AS cc-trimmer
 
