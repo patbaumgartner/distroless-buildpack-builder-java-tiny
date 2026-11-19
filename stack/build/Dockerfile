@@ -15,7 +15,7 @@
 # Do not raise this past the run image's glibc. See .github/dependabot.yml,
 # which restricts this image to patch/digest updates for the same reason.
 
-FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+FROM ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8
 
 ARG CNB_USER_ID=1000
 ARG CNB_GROUP_ID=1000
