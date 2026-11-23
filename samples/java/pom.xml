@@ -55,6 +55,8 @@
             <pullPolicy>IF_NOT_PRESENT</pullPolicy>
             <env>
               <BP_JVM_JLINK_ENABLED>true</BP_JVM_JLINK_ENABLED>
+              <!-- Spring Cloud Bindings is unsupported by Spring Boot 4.2+. -->
+              <BP_SPRING_CLOUD_BINDINGS_DISABLED>true</BP_SPRING_CLOUD_BINDINGS_DISABLED>
             </env>
           </image>
         </configuration>
