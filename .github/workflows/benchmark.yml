@@ -248,21 +248,26 @@ jobs:
           }
           trap cleanup EXIT
 
-          for attempt in 1 2 3; do
+          # Start from a clean cache for the measurement; if a dependency
+          # download fails, keep the layers already fetched for retries so a
+          # transient Maven Central outage does not restart the whole build.
+          cache_args=(--clear-cache)
+          for attempt in 1 2 3 4 5; do
             if pack build "${IMAGE}" \
               --path "./samples/${SAMPLE}" \
               --builder "${BUILDER}" \
               --trust-builder \
               --pull-policy if-not-present \
-              --clear-cache 2>&1 | tail -30; then
+              "${cache_args[@]}" 2>&1 | tail -30; then
               break
             fi
-            echo "pack build attempt ${attempt} failed — retrying in 15s..."
-            sleep 15
-            if [[ "${attempt}" -eq 3 ]]; then
-              echo "pack build failed for ${SAMPLE} after 3 attempts" >&2
+            if [[ "${attempt}" -eq 5 ]]; then
+              echo "pack build failed for ${SAMPLE} after 5 attempts" >&2
               exit 1
             fi
+            echo "pack build attempt ${attempt} failed — retrying in 30s..."
+            cache_args=()
+            sleep 30
           done
 
           START=$(date +%s)
