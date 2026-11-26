@@ -20,6 +20,10 @@ permissions:
   contents: read
   packages: read
 
+# trivy-action strips the `severity` filter from SARIF output unless
+# `limit-severities-for-sarif` is enabled, and findings with no upstream fix
+# cannot be actioned. Keep code scanning focused on the CRITICAL/HIGH policy
+# declared on each scan step.
 jobs:
   # -------------------------------------------------------------------------
   # Scan Dockerfiles with Hadolint (Dockerfile best practices)
@@ -87,6 +91,8 @@ jobs:
           format: sarif
           output: trivy-fs.sarif
           severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
           exit-code: "0"
           github-pat: ${{ secrets.GITHUB_TOKEN }}
 
@@ -131,6 +137,8 @@ jobs:
           format: sarif
           output: trivy-build-image.sarif
           severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
           exit-code: "0"
           github-pat: ${{ secrets.GITHUB_TOKEN }}
 
@@ -175,6 +183,8 @@ jobs:
           format: sarif
           output: trivy-run-image.sarif
           severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
           exit-code: "0"
           github-pat: ${{ secrets.GITHUB_TOKEN }}
 
